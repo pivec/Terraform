@@ -95,5 +95,14 @@ resource "aws_security_group" "elb" {
   }
 }
 
+terraform {
+  backend "s3" {
+    bucket = "hquinn-tf-s3-bucket"
+    key    = "staging/services/webapp/terraform.tfstate"
+    region = "us-east-1"
+    encrypt = "true"
+  }
+}
+
 # Data source for fetching AZs
 data "aws_availability_zones" "all" {}
