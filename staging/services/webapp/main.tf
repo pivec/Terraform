@@ -8,13 +8,9 @@ resource "aws_launch_configuration" "example" {
   image_id    = "ami-40d28157"
   instance_type = "t2.micro"
   security_groups = ["${aws_security_group.instance.id}"]
+  user_data       = "${data.template_file.user_data.rendered}"
 
-  user_data = <<-EOF
-          #!/bin/bash
-          echo "Hello, World" > index.html
-          nohup busybox httpd -f -p "${var.server_port}" &
-          EOF
-    lifecycle {
+  lifecycle {
     create_before_destroy = true
     }
 }
@@ -106,3 +102,29 @@ terraform {
 
 # Data source for fetching AZs
 data "aws_availability_zones" "all" {}
+
+# Reads database state file in S3
+data "terraform_remote_state" "db" {
+  backend = "s3"
+
+  config {
+    bucket = "(hquinn-tf-s3-bucket)"
+    key    = "staging/data-stores/mysql/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+data "template_file" "user_data" {
+  template = "${file("user-data.sh")}""
+
+  vars {
+    server_port = "$"{var.server_port}"
+    db_address  = "${data.terraform_remote_state.db.address}"
+    db_port     = "${data.terraform_remote_state.db.port}"
+  }
+}
+
+
+
+
+
